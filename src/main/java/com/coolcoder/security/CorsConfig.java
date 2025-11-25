@@ -6,22 +6,27 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import java.util.List;
+
 @Configuration
 public class CorsConfig {
 
-	@Bean
-	public CorsFilter corsFilter() {
-		CorsConfiguration config = new CorsConfiguration();
-		config.addAllowedOrigin("http://localhost:8080"); // your frontend
-		config.addAllowedOrigin("http://localhost:5173"); // vite fallback
-		config.addAllowedOriginPattern("*"); // allow all if needed
-		config.addAllowedHeader("*");
-		config.addAllowedMethod("*");
-		config.setAllowCredentials(true);
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
 
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", config);
+        // Your live frontend URL
+        config.setAllowedOrigins(List.of(
+                "https://balc-fawn.vercel.app"
+        ));
 
-		return new CorsFilter(source);
-	}
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true); // required for JWT cookie
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+
+        return new CorsFilter(source);
+    }
 }

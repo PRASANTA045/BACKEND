@@ -34,7 +34,7 @@ public class SecurityConfig {
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
 		http.cors(cors -> {
-		}) // ✅ Enable cors
+		}) //  Enable cors
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(m -> m.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**").permitAll()
