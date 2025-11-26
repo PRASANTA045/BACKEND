@@ -102,7 +102,7 @@ public String generateHash() {
 cookie.setHttpOnly(true);
 cookie.setSecure(true);
 cookie.setPath("/");
- // <-- NO pattern
+cookie.setDomain("balc-fawn.vercel.app");
 cookie.setAttribute("SameSite", "None");  // <-- REQUIRED FOR CROSS-SITE
 cookie.setMaxAge(7 * 24 * 60 * 60);
 
