@@ -19,7 +19,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.coolcoder.repository.UserRepository;
 
-
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -29,7 +28,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
-    // ⛔ Do NOT filter for login/register
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request.getServletPath().startsWith("/api/auth/");
@@ -43,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = null;
 
-        // ⭐ Check Cookie for JWT
+        // ⭐ Extract from Cookie
         if (request.getCookies() != null) {
             for (Cookie c : request.getCookies()) {
                 if ("jwt".equals(c.getName())) {
@@ -52,7 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // ⭐ Check Authorization header
+        // ⭐ Extract from Header
         if (token == null) {
             String header = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (header != null && header.startsWith("Bearer ")) {
@@ -60,7 +58,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // ⭐ No token → move to next filter
         if (token == null) {
             chain.doFilter(request, response);
             return;
@@ -68,7 +65,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String email = jwtService.extractUsername(token);
 
-        // ⭐ Ensure no prior authentication
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             var userOpt = userRepository.findByEmail(email);
@@ -80,15 +76,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // ⭐ Extract role from JWT
                 String role = jwtService.extractClaim(token, c -> c.get("role", String.class));
 
-                // ⭐ Prevent null authority crash
                 if (role == null || role.isBlank()) {
                     role = user.getRole().name();
                 }
-				role = role.toUpperCase();
+
+                role = role.toUpperCase();
+
+                // ⭐ MOST IMPORTANT FIX
+                String springRole = "ROLE_" + role;
 
                 var userDetails = User.withUsername(user.getEmail())
                         .password(user.getPassword())
-                        .authorities(new SimpleGrantedAuthority(role))
+                        .authorities(new SimpleGrantedAuthority(springRole))
                         .build();
 
                 // ⭐ Validate token
