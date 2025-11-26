@@ -27,48 +27,66 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-	private final JwtAuthenticationFilter jwtFilter;
-	private final UserRepository userRepository;
+    private final JwtAuthenticationFilter jwtFilter;
+    private final UserRepository userRepository;
 
-	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-		http.cors(cors -> {
-		}) //  Enable cors
-				.csrf(csrf -> csrf.disable())
-				.sessionManagement(m -> m.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/auth/**").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
-						.requestMatchers(HttpMethod.POST, "/api/courses/**").hasRole("ADMIN").anyRequest()
-						.authenticated())
-				.authenticationProvider(authProvider())
-				.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        http
+            .cors(cors -> {})
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/**").permitAll()           // login/register
+                .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/courses/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            .authenticationProvider(authProvider())
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-		return http.build();
-	}
+        return http.build();
+    }
 
-	@Bean
-	public UserDetailsService userDetailsService() {
-		return email -> userRepository.findByEmail(email)
-				.map(u -> User.withUsername(u.getEmail()).password(u.getPassword()).roles(u.getRole().name()).build())
-				.orElseThrow(() -> new UsernameNotFoundException("User not found"));
-	}
+    // ===============================
+    // UserDetailsService
+    // ===============================
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return email -> userRepository.findByEmail(email)
+                .map(u -> User.withUsername(u.getEmail())
+                        .password(u.getPassword())
+                        .authorities("ROLE_" + u.getRole().name()) // FIX: always ROLE_ADMIN or ROLE_USER
+                        .build()
+                )
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
 
-	@Bean
-	public AuthenticationProvider authProvider() {
-		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-		provider.setUserDetailsService(userDetailsService());
-		provider.setPasswordEncoder(passwordEncoder());
-		return provider;
-	}
+    // ===============================
+    // Auth Provider
+    // ===============================
+    @Bean
+    public AuthenticationProvider authProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(userDetailsService());
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
+    }
 
-	@Bean
-	public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
-		return config.getAuthenticationManager();
-	}
+    // ===============================
+    // Auth Manager
+    // ===============================
+    @Bean
+    public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
 
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+    // ===============================
+    // Password Encoder
+    // ===============================
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 }
