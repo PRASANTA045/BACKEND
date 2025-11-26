@@ -1,15 +1,15 @@
 package com.coolcoder.controller;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.coolcoder.dto.AuthRequest;
 import com.coolcoder.dto.AuthResponse;
@@ -21,9 +21,6 @@ import com.coolcoder.model.Role;
 import com.coolcoder.model.User;
 import com.coolcoder.repository.UserRepository;
 import com.coolcoder.security.JwtService;
-
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -41,24 +38,16 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserDto> register(@Valid @RequestBody CreateUserRequest request) {
 
-        // Check if email exists
-        User existingUser = userRepository.findByEmail(request.getEmail()).orElse(null);
-
-        if (existingUser != null) {
-
-            // Name different → block
-            if (!existingUser.getFullName().equalsIgnoreCase(request.getFullName())) {
+        User existing = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (existing != null) {
+            if (!existing.getFullName().equalsIgnoreCase(request.getFullName())) {
                 throw new BadRequestException("This email is already registered with a different name.");
             }
-
-            // Name same → still block
             throw new BadRequestException("Email already registered. Please login.");
         }
 
-        // Assign default user role
         Role role = request.getRole() == null ? Role.USER : request.getRole();
 
-        // Create new user
         User user = User.builder()
                 .fullName(request.getFullName())
                 .email(request.getEmail())
@@ -80,44 +69,45 @@ public class AuthController {
     }
 
     // ===========================
-    // LOGIN
+    // LOGIN  (WORKING, FINAL)
     // ===========================
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request,
+                                   HttpServletResponse response) {
 
+        // Validate credentials
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
+        // Load user entity from DB
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        String token = jwtService.generateToken(
-                org.springframework.security.core.userdetails.User
-                        .withUsername(user.getEmail())
-                        .password(user.getPassword())
-                        .roles(user.getRole().name())
+        // ⭐ GENERATE TOKEN USING ENTITY (NOT USERDETAILS)
+        String token = jwtService.generateToken(user);
+
+        // ⭐ SET COOKIE
+        Cookie cookie = new Cookie("jwt", token);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(7 * 24 * 60 * 60);
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(
+                AuthResponse.builder()
+                        .message("Login successful")
+                        .user(
+                                UserDto.builder()
+                                        .id(user.getId())
+                                        .fullName(user.getFullName())
+                                        .email(user.getEmail())
+                                        .role(user.getRole().name())
+                                        .createdAt(user.getCreatedAt())
+                                        .build()
+                        )
                         .build()
         );
-
-        // ===========================
-        //    SET HTTP-ONLY COOKIE
-        // ===========================
-        ResponseCookie cookie = ResponseCookie.from("jwt", token)
-                .httpOnly(true)
-                .secure(true)          // required for Vercel (HTTPS)
-                .sameSite("None")      // required for cross-site cookies
-                .path("/")
-                .maxAge(7 * 24 * 60 * 60) // 7 days
-                .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                .body(
-                        AuthResponse.builder()
-                                .message("Login successful")
-                                .user(user)
-                                .build()
-                );
     }
 }

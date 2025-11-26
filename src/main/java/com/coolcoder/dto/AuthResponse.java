@@ -1,6 +1,5 @@
 package com.coolcoder.dto;
 
-import com.coolcoder.model.User;
 import lombok.Builder;
 import lombok.Data;
 
@@ -8,5 +7,5 @@ import lombok.Data;
 @Builder
 public class AuthResponse {
     private String message;
-    private User user;
+    private UserDto user;   // ✔ CORRECT
 }
