@@ -69,7 +69,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails = User.withUsername(user.getEmail())
                         .password(user.getPassword())
-                        .authorities("ROLE_" + user.getRole().name())  
+                        .authorities(user.getRole().name())  
                         .build();
 
                 if (jwtService.isValid(token, userDetails)) {
