@@ -73,7 +73,7 @@ public class AuthController {
                         .id(user.getId())
                         .fullName(user.getFullName())
                         .email(user.getEmail())
-                        .role(user.getRole())
+                        .role(user.getRole().name())
                         .createdAt(user.getCreatedAt())
                         .build()
         );
