@@ -34,19 +34,23 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            .cors(c -> {})
+            .cors(c -> {})  // Your CORS config
             .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
 
+                // Public APIs
+                .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
 
-                .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/courses/**").hasAuthority("ADMIN")
+                // ADMIN ONLY ROUTES
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/courses/**").hasRole("ADMIN")
 
+                // ALL OTHER REQUIRE LOGIN
                 .anyRequest().authenticated()
             )
+
             .authenticationProvider(authProvider())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -58,7 +62,10 @@ public class SecurityConfig {
         return email -> userRepository.findByEmail(email)
                 .map(u -> User.withUsername(u.getEmail())
                         .password(u.getPassword())
-                        .authorities(u.getRole().name())
+
+                        // 🔥 MOST IMPORTANT FIX
+                        .authorities("ROLE_" + u.getRole().name())
+
                         .build()
                 )
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
