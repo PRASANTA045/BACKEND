@@ -40,6 +40,7 @@ public class AuthController {
 
         User existing = userRepository.findByEmail(request.getEmail()).orElse(null);
         if (existing != null) {
+
             if (!existing.getFullName().equalsIgnoreCase(request.getFullName())) {
                 throw new BadRequestException("This email is already registered with a different name.");
             }
@@ -69,30 +70,30 @@ public class AuthController {
     }
 
     // ===========================
-    // LOGIN  (WORKING, FINAL)
+    // LOGIN
     // ===========================
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request,
                                    HttpServletResponse response) {
 
-        // Validate credentials
+        // Validate user credentials
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
-        // Load user entity from DB
+        // Fetch user
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        // ⭐ GENERATE TOKEN USING ENTITY (NOT USERDETAILS)
+        // ⭐ Generate token FROM ENTITY (this includes role)
         String token = jwtService.generateToken(user);
 
-        // ⭐ SET COOKIE
+        // ⭐ Set Cookie
         Cookie cookie = new Cookie("jwt", token);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(true);         // Required for Vercel/HTTPS
         cookie.setPath("/");
-        cookie.setMaxAge(7 * 24 * 60 * 60);
+        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
         response.addCookie(cookie);
 
         return ResponseEntity.ok(
@@ -103,7 +104,7 @@ public class AuthController {
                                         .id(user.getId())
                                         .fullName(user.getFullName())
                                         .email(user.getEmail())
-                                        .role(user.getRole().name())
+                                        .role(user.getRole().name())   // Send ADMIN / USER
                                         .createdAt(user.getCreatedAt())
                                         .build()
                         )
