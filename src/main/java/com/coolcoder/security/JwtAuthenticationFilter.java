@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.coolcoder.repository.UserRepository;
-import com.coolcoder.security.JwtService;   // ⭐ REQUIRED IMPORT
+
 
 import lombok.RequiredArgsConstructor;
 
@@ -82,8 +82,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // ⭐ Prevent null authority crash
                 if (role == null || role.isBlank()) {
-                    role = "USER";
+                    role = user.getRole().name();
                 }
+				role = role.toUpperCase();
 
                 var userDetails = User.withUsername(user.getEmail())
                         .password(user.getPassword())
