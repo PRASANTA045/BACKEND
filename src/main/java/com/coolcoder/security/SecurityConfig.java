@@ -30,15 +30,14 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtFilter;
     private final UserRepository userRepository;
 
-    // USER LOADING FROM DATABASE (MAIN FIX DONE HERE)
+    // LOAD USER FROM DATABASE
     @Bean
     public UserDetailsService userDetailsService() {
         return email -> userRepository.findByEmail(email)
                 .map(u -> User.withUsername(u.getEmail())
                         .password(u.getPassword())
-                        .roles(u.getRole().name())   // 🔥 FIXED (Don't use authorities)
-                        .build()
-                )
+                        .roles(u.getRole().name())   // ⭐ ROLE_USER / ROLE_ADMIN auto handle
+                        .build())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
@@ -46,8 +45,8 @@ public class SecurityConfig {
     @Bean
     public AuthenticationProvider authProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setPasswordEncoder(passwordEncoder());
         provider.setUserDetailsService(userDetailsService());
+        provider.setPasswordEncoder(passwordEncoder());
         return provider;
     }
 
@@ -63,33 +62,32 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // SECURITY FILTER CHAIN
+    // MAIN SECURITY CONFIG
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-            .cors(c -> {})
-            .csrf(c -> c.disable())
-            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
+                .cors(c -> {})                               // ⭐ CORSConfig से rules आएंगे
+                .csrf(c -> c.disable())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
 
-                // PUBLIC ROUTES
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
+                        // PUBLIC ENDPOINTS
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
 
-                // ADMIN ONLY
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/courses/**").hasRole("ADMIN")
+                        // ADMIN ONLY
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/courses/**").hasRole("ADMIN")
 
-                // ALL OTHERS NEED LOGIN
-                .anyRequest().authenticated()
-            )
+                        // ANY OTHER REQUEST MUST REQUIRE LOGIN
+                        .anyRequest().authenticated()
+                )
 
-            // FIX: REGISTER CUSTOM AUTH PROVIDER
-            .authenticationProvider(authProvider())
+                .authenticationProvider(authProvider())
 
-            // JWT FILTER
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                // JWT BEFORE USERNAME PASSWORD FILTER
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

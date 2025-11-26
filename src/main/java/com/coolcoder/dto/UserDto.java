@@ -2,7 +2,7 @@ package com.coolcoder.dto;
 
 import java.time.Instant;
 
-import com.coolcoder.model.Role;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
