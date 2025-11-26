@@ -102,7 +102,7 @@ public String generateHash() {
         cookie.setHttpOnly(true);
         cookie.setSecure(true);           // required for vercel/https
         cookie.setPath("/");
-        cookie.setDomain("backend-production-09c2.up.railway.app");
+        cookie.setDomain("balc-fawn.vercel.app");
         cookie.setMaxAge(7 * 24 * 60 * 60);
         response.addCookie(cookie);
 
