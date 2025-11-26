@@ -103,6 +103,7 @@ public String generateHash() {
         cookie.setSecure(true);           // required for vercel/https
         cookie.setPath("/");
         cookie.setDomain("balc-fawn.vercel.app");
+        cookie.setAttribute("SameSite", "None");
         cookie.setMaxAge(7 * 24 * 60 * 60);
         response.addCookie(cookie);
 
