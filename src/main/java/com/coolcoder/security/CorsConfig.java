@@ -17,8 +17,8 @@ public class CorsConfig {
 
         config.setAllowCredentials(true);
 
-        // 🔥 ONLY FRONTEND DOMAIN ALLOWED
-        config.setAllowedOrigins(List.of(
+        // 🔥 USE allowedOriginPatterns instead of allowedOrigins
+        config.setAllowedOriginPatterns(List.of(
                 "https://balc-fawn.vercel.app",
                 "http://localhost:5173"
         ));
