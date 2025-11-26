@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
 	}
 
 	private UserDto toDto(User u) {
-		return UserDto.builder().id(u.getId()).fullName(u.getFullName()).email(u.getEmail()).role(u.getRole())
+		return UserDto.builder().id(u.getId()).fullName(u.getFullName()).email(u.getEmail()).role(u.getRole().name())
 				.createdAt(u.getCreatedAt()).build();
 	}
 
