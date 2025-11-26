@@ -40,7 +40,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()           // login/register
                 .requestMatchers(HttpMethod.GET, "/api/courses/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/courses/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/courses/**").hasAuthority("ADMIN")
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authProvider())
@@ -57,7 +57,7 @@ public class SecurityConfig {
         return email -> userRepository.findByEmail(email)
                 .map(u -> User.withUsername(u.getEmail())
                         .password(u.getPassword())
-                        .authorities("ROLE_" + u.getRole().name()) // FIX: always ROLE_ADMIN or ROLE_USER
+                        .authorities(u.getRole().name()) // FIX: always ROLE_ADMIN or ROLE_USER
                         .build()
                 )
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
