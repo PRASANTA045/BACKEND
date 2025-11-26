@@ -28,14 +28,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain
+    ) throws ServletException, IOException {
 
         String token = null;
 
-        // -----------------------------------
-        // 1️⃣ READ TOKEN FROM COOKIE (IMPORTANT)
-        // -----------------------------------
+        // Read from cookie
         if (request.getCookies() != null) {
             for (Cookie cookie : request.getCookies()) {
                 if ("jwt".equals(cookie.getName())) {
@@ -44,9 +45,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // -----------------------------------
-        // 2️⃣ IF NOT IN COOKIE, CHECK HEADER
-        // -----------------------------------
+        // Read from header
         if (token == null) {
             String header = request.getHeader(HttpHeaders.AUTHORIZATION);
             if (header != null && header.startsWith("Bearer ")) {
@@ -54,25 +53,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         }
 
-        // No token found → allow request but unauthenticated
         if (token == null) {
             chain.doFilter(request, response);
             return;
         }
 
-        // Extract username from token
         String email = jwtService.extractUsername(token);
 
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            var userOpt = userRepository.findByEmail(email);
+            var u = userRepository.findByEmail(email);
 
-            if (userOpt.isPresent()) {
-                var u = userOpt.get();
+            if (u.isPresent()) {
+                var user = u.get();
 
-                UserDetails userDetails = User.withUsername(u.getEmail())
-                        .password(u.getPassword())
-                        .roles(u.getRole().name())
+                UserDetails userDetails = User.withUsername(user.getEmail())
+                        .password(user.getPassword())
+                        .authorities("ROLE_" + user.getRole().name())  
                         .build();
 
                 if (jwtService.isValid(token, userDetails)) {
@@ -85,7 +82,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             );
 
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 }
             }
