@@ -98,14 +98,16 @@ public String generateHash() {
         String token = jwtService.generateToken(user);
 
         // 4. Set HttpOnly cookie
-        Cookie cookie = new Cookie("jwt", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);           // required for vercel/https
-        cookie.setPath("/");
-        cookie.setDomain("balc-fawn.vercel.app");
-        cookie.setAttribute("SameSite", "None");
-        cookie.setMaxAge(7 * 24 * 60 * 60);
-        response.addCookie(cookie);
+       Cookie cookie = new Cookie("jwt", token);
+cookie.setHttpOnly(true);
+cookie.setSecure(true);
+cookie.setPath("/");
+cookie.setDomain("balc-fawn.vercel.app"); // <-- NO pattern
+cookie.setAttribute("SameSite", "None");  // <-- REQUIRED FOR CROSS-SITE
+cookie.setMaxAge(7 * 24 * 60 * 60);
+
+response.addCookie(cookie);
+
 
         // 5. Return user
         return ResponseEntity.ok(
