@@ -69,11 +69,18 @@ public class AuthController {
     // ===========================
     // LOGIN (FIXED)
     // ===========================
+    @GetMapping("/generate")
+public String generateHash() {
+    return passwordEncoder.encode("Admin@123");
+}
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request,
                                    HttpServletResponse response) {
 
         System.out.println("🔍 LOGIN ATTEMPT: " + request.getEmail());
+
+    
 
         // 1. Find user by email
         User user = userRepository.findByEmail(request.getEmail())
