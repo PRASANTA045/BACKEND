@@ -6,8 +6,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,7 +25,6 @@ import com.coolcoder.security.JwtService;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -70,32 +67,38 @@ public class AuthController {
     }
 
     // ===========================
-    // LOGIN
+    // LOGIN (FIXED)
     // ===========================
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AuthRequest request,
                                    HttpServletResponse response) {
 
-        // Validate user credentials
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        System.out.println("🔍 LOGIN ATTEMPT: " + request.getEmail());
 
-        // Fetch user
+        // 1. Find user by email
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
-        // ⭐ Generate token FROM ENTITY (this includes role)
+        // 2. Check password manually
+        boolean match = passwordEncoder.matches(request.getPassword(), user.getPassword());
+        System.out.println("🔍 PASSWORD MATCH = " + match);
+
+        if (!match) {
+            throw new BadRequestException("Invalid Password");
+        }
+
+        // 3. Generate JWT token
         String token = jwtService.generateToken(user);
 
-        // ⭐ Set Cookie
+        // 4. Set HttpOnly cookie
         Cookie cookie = new Cookie("jwt", token);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);         // Required for Vercel/HTTPS
+        cookie.setSecure(true);           // required for vercel/https
         cookie.setPath("/");
-        cookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
+        cookie.setMaxAge(7 * 24 * 60 * 60);
         response.addCookie(cookie);
 
+        // 5. Return user
         return ResponseEntity.ok(
                 AuthResponse.builder()
                         .message("Login successful")
@@ -104,7 +107,7 @@ public class AuthController {
                                         .id(user.getId())
                                         .fullName(user.getFullName())
                                         .email(user.getEmail())
-                                        .role(user.getRole().name())   // Send ADMIN / USER
+                                        .role(user.getRole().name())
                                         .createdAt(user.getCreatedAt())
                                         .build()
                         )
